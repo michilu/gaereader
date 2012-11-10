@@ -1,48 +1,34 @@
 # -*- coding: utf-8 -*-
-# (c) 2008, Marcin Kasperski
+# (c) 2012, ENDOH takanao
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Command
 import os
-execfile(os.path.join(os.path.dirname(__file__), "src", "mekk", "greader", "version.py"))
 
-KEYWORDS = 'google reader client'
-DESCRIPTION = "Simple wrapper for Google Reader API."
+VERSION = "1.2.2"
+KEYWORDS = 'google reader client gae appengine'
+DESCRIPTION = "A Google Reader API client that is optimized for Google App Engine"
 LONG_DESCRIPTION = open("README.txt").read()
 CLASSIFIERS = [
     "Programming Language :: Python",
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Development Status :: 4 - Beta",
-    "Environment :: Console",
     ]
 
-setup(name = 'mekk.greader',
+setup(name = 'gaereader',
       version = VERSION,
       description = DESCRIPTION,
       long_description = LONG_DESCRIPTION,
       classifiers = CLASSIFIERS,
       keywords = KEYWORDS,
       license='BSD',
-      author='Marcin Kasperski',
-      author_email='Marcin.Kasperski@mekk.waw.pl',
-      url='http://bitbucket.org/Mekk/mekk.greader',
-      package_dir={'':'src'},
-      packages=find_packages('src', exclude=['ez_setup', 'examples', 'tests']),
-      namespace_packages=['mekk'],
-      test_suite = 'nose.collector',
+      author='ENDOH takanao',
+      author_email='djmchl@gmail.com',
+      url='https://github.com/MiCHiLU/gaereader',
+      packages=find_packages('gaereader', exclude=['sample', 'tests']),
       include_package_data = True,
-      package_data = {
-        'mekk' : [
-            'README.txt',
-            'LICENSE.txt',
-            'doc/usage.txt',
-            ],
-        },
       zip_safe = True,
       install_requires=[
-        'lxml', 'simplejson',
+        'lxml',
       ],
-      tests_require=[
-        'nose',
-        ],
 )

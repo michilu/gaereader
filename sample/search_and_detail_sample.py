@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-mekk.greader example - sample for search and some other methods
+gaereader example - sample for search and some other methods
 """
 
-from mekk.greader import GoogleReaderClient, GoogleLoginFailed
+from gaereader import GoogleReaderClient, GoogleLoginFailed
 from pprint import pprint
 
 import logging
@@ -26,21 +26,21 @@ def get_username_and_password(force_fresh_input = False):
     """
     import keyring, getpass
 
-    username = keyring.get_password("mekk.greader", "default-login")
+    username = keyring.get_password("gaereader", "default-login")
     if (not username) or force_fresh_input:
         while True:
             username = raw_input("Your Google account name: ")
             if username:
                 break
-        keyring.set_password("mekk.greader", "default-login", username)
+        keyring.set_password("gaereader", "default-login", username)
 
-    password = keyring.get_password("mekk.greader", username)
+    password = keyring.get_password("gaereader", username)
     if (not password) or force_fresh_input:
         while True:
             password = getpass.getpass("Password for %s: " % username)
             if password:
                 break
-        keyring.set_password("mekk.greader", username, password)
+        keyring.set_password("gaereader", username, password)
 
     return username, password
 

@@ -1,5 +1,5 @@
 ============
-mekk.greader
+gaereader
 ============
 
 Simple Google Reader access API. The module implements a couple of
@@ -23,8 +23,8 @@ rename feeds, especially via greader2org_.
 Sources, patches, bug reports
 =============================
 
-Source code is available on `BitBucket`_. The same page can be used
+Source code is available on `GitHub`_. The same page can be used
 for bug reporting and for patch submission.
 
-.. _BitBucket: http://bitbucket.org/Mekk/mekk.greader
+.. _GitHub: https://github.com/MiCHiLU/gaereader
 
