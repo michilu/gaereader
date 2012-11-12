@@ -84,8 +84,9 @@ class GoogleReaderClient(object):
     Remaining functions allow one to manage subscription feeds.
     """
     
+    @ndb.synctasklet
     def __init__(self, login, password):
-        self.session_id = self._get_session_id(login, password)
+        self.session_id = yield self._get_session_id_async(login, password)
         self.cached_token = None
         self.cached_token_time = 0
         self.my_id = '-'
@@ -231,6 +232,7 @@ class GoogleReaderClient(object):
     ############################################################
     # Public API - item
 
+    @ndb.synctasklet
     def search_for_articles(self, query, count=20):
         """
         Searches for articles using given text query.
@@ -256,9 +258,11 @@ class GoogleReaderClient(object):
                 "ck": int(time.mktime(datetime.now().timetuple())),
                 "client": SOURCE,
                 })
-        reply = json.loads(self._make_call(url))
-        return [ item['id'] for item in reply['results'] ]
+        result = yield self._make_call_async(url)
+        reply = json.loads(result)
+        raise ndb.Return([ item['id'] for item in reply['results'] ])
 
+    @ndb.synctasklet
     def article_contents(self, ids):
         """
         Return article (entry) contents of specified articles. ids is
@@ -275,8 +279,10 @@ class GoogleReaderClient(object):
         post_params = [("i", id_) for id_ in ids]
         #post_params.extend([("it", "0")] * len(post_params))
         post_params.append(("T", self._get_token()))
-        return json.loads(self._make_call(url, post_params))
+        result = yield self._make_call_async(url, post_params)
+        raise ndb.Return(json.loads(result))
 
+    @ndb.synctasklet
     def feed_contents(self, feed_url, count=20, older_first=False):
         """
         Returns list of articles belonging to given feed.
@@ -287,7 +293,8 @@ class GoogleReaderClient(object):
                 "n": count,
                 "r": (older_first and "o" or "d"),
                 "client": SOURCE})
-        return json.loads(self._make_call(url))
+        result = yield self._make_call_async(url)
+        raise ndb.Return(json.loads(result))
 
 
     ############################################################
@@ -317,6 +324,7 @@ class GoogleReaderClient(object):
     ############################################################
     # Public API - subscription modifications
 
+    @ndb.synctasklet
     def subscribe_quickadd(self, site_url):
         """
         Subscribe to given site url.
@@ -348,7 +356,8 @@ class GoogleReaderClient(object):
             "quickadd": site_url,
             "T": self._get_token(),
             }
-        return json.loads(self._make_call(url, post_params))
+        result = yield self._make_call_async(url, post_params)
+        raise ndb.Return(json.loads(result))
 
     def subscribe_feed(self, feed_url, title = None):
         """
@@ -391,6 +400,7 @@ class GoogleReaderClient(object):
         """
         return self._change_tag(feed_url, title, remove_tag = tag)
 
+    @ndb.synctasklet
     def disable_tag(self, tag):
         """
         Removes tag as a whole
@@ -400,7 +410,7 @@ class GoogleReaderClient(object):
             's' : self.tag_id(tag),
             'ac' : 'disable-tags',
             }
-        reply = self._make_call(url, post_data)
+        reply = yield self._make_call_async(url, post_data)
         if reply != "OK":
             raise GoogleOperationFailed
         return
@@ -448,6 +458,7 @@ class GoogleReaderClient(object):
             raise GoogleLoginFailed
         raise ndb.Return(sid)
 
+    @ndb.synctasklet
     def _get_token(self):
         """
         Obtain the call protection token
@@ -455,10 +466,11 @@ class GoogleReaderClient(object):
         # Token jest jakiś czas ważny...
         t = time.time()
         if t - self.cached_token_time > TOKEN_VALID_TIME:
-            self.cached_token = self._make_call(TOKEN_URL)
+            self.cached_token = yield self._make_call_async(TOKEN_URL)
             self.cached_token_time = t
-        return self.cached_token
+        raise ndb.Return(self.cached_token)
 
+    @ndb.synctasklet
     def _get_atom(self, url, count = None, 
                   older_first = False, continue_from = None, format = 'obj'):
         """
@@ -479,14 +491,15 @@ class GoogleReaderClient(object):
             args['c'] = continue_from
         if args:
             url = url.encode('utf-8') + '?' + urllib.urlencode(args)
-        r = self._make_call(url)
+        r = yield self._make_call_async(url)
         if format == "obj":
-            return objectify.fromstring(r)
+            raise ndb.Return(objectify.fromstring(r))
         elif format == "etree":
-            return etree.XML(r)
+            raise ndb.Return(etree.XML(r))
         else:
-            return r
+            raise ndb.Return(r)
 
+    @ndb.synctasklet
     def _change_feed(self, feed_url, operation,
                      title = None, add_tag = None, remove_tag = None):
         """
@@ -504,11 +517,12 @@ class GoogleReaderClient(object):
             post_data['a'] = self.tag_id(add_tag)
         if remove_tag:
             post_data['r'] = self.tag_id(remove_tag)
-        reply = self._make_call(url, post_data)
+        reply = yield self._make_call_async(url, post_data)
         if reply != "OK":
             raise GoogleOperationFailed
         return
 
+    @ndb.synctasklet
     def _change_tag(self, feed_url, title, add_tag = None, remove_tag = None):
         """
         Subscribe or unsubscribe
@@ -525,7 +539,7 @@ class GoogleReaderClient(object):
             post_data['a'] = self.tag_id(add_tag)
         if remove_tag:
             post_data['r'] = self.tag_id(remove_tag)
-        reply = self._make_call(url, post_data)
+        reply = yield self._make_call_async(url, post_data)
         if reply != "OK":
             raise GoogleOperationFailed
 
@@ -543,12 +557,14 @@ class GoogleReaderClient(object):
 
         return
 
+    @ndb.synctasklet
     def _get_list(self, url, format):
         if format == 'obj':
-            return json.loads(
-                self._make_call(url + '?output=json'))
+            result = yield self._make_call_async(url + '?output=json')
+            raise ndb.Return(json.loads(result))
         else:
-            return self._make_call(url + '?output=' + format)
+            result = yield self._make_call_async(url + '?output=' + format)
+            raise ndb.Return(result)
         
 
     @ndb.synctasklet
