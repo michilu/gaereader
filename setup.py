@@ -15,6 +15,23 @@ CLASSIFIERS = [
     "Development Status :: 4 - Beta",
     ]
 
+class PyTest(Command):
+    user_options = []
+    def initialize_options(self):
+        pass
+    def finalize_options(self):
+        pass
+    def run(self):
+        import sys,subprocess
+        errno = subprocess.call([sys.executable, 'runtests.py'])
+        raise SystemExit(errno)
+
+class PyTestWithCov(PyTest):
+    def run(self):
+        import sys,subprocess
+        errno = subprocess.call([sys.executable, 'runtests.py', '--cov-report=html', '--cov=.', '--pdb'])
+        raise SystemExit(errno)
+
 setup(name = 'gaereader',
       version = VERSION,
       description = DESCRIPTION,
@@ -31,4 +48,8 @@ setup(name = 'gaereader',
       install_requires=[
         'lxml',
       ],
+      cmdclass = {
+        'test': PyTest,
+        'cov': PyTestWithCov,
+      },
 )
