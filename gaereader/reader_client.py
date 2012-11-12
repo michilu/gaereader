@@ -409,7 +409,12 @@ class GoogleReaderClient(object):
     # Helper functions
 
     @ndb.synctasklet
-    def _get_session_id(self, login, password):
+    def _get_session_id(self, *argv, **kwargv):
+      result = yield self._get_session_id_async(*argv, **kwargv)
+      raise ndb.Return(result)
+
+    @ndb.tasklet
+    def _get_session_id_async(self, login, password):
         """
         Logging in (and obtaining the session id)
         """
@@ -547,7 +552,12 @@ class GoogleReaderClient(object):
         
 
     @ndb.synctasklet
-    def _make_call(self, url, post_data=None):
+    def _make_call(self, *argv, **kwargv):
+      result = yield self._make_call_async(*argv, **kwargv)
+      raise ndb.Return(result)
+
+    @ndb.tasklet
+    def _make_call_async(self, url, post_data=None):
         """
         Actually executes a call to given url, adding authorization headers
         and parameters.
