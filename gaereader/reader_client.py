@@ -13,6 +13,7 @@ Google Reader client.
 # More docs, not yet fully consumed:
 # http://undoc.in/googlereader.html#search-items-ids
 
+from cStringIO import StringIO
 import urllib
 import urllib2
 import re
@@ -20,6 +21,7 @@ import json
 import time
 from datetime import datetime
 from lxml import etree, objectify
+from google.appengine.ext import ndb
 
 import logging
 log = logging.getLogger("reader")
@@ -406,6 +408,7 @@ class GoogleReaderClient(object):
     ############################################################
     # Helper functions
 
+    @ndb.synctasklet
     def _get_session_id(self, login, password):
         """
         Logging in (and obtaining the session id)
@@ -427,21 +430,18 @@ class GoogleReaderClient(object):
             log.info("Calling %s with parameters:\n    %s" % (
                         request.get_full_url(), str(pdcopy)))
 
-        try:
-            f = urllib2.urlopen( request )
-        except urllib2.HTTPError as e:
-            if e.code == 403:
-                raise GoogleLoginFailed("%s (%s)" % (e, e.read().rstrip()))
-            else:
-                raise
-        result = f.read()
+        result = yield ndb.get_context().urlfetch(LOGIN_URL, payload=request.data, headers=request.headers)
+        if result.status_code == 403:
+            raise GoogleLoginFailed("%s (%s)" % (result, result.content))
+        elif result.status_code != 200:
+            raise urllib2.HTTPError(result.final_url, result.status_code, None, result.headers, StringIO(result.content))
 
         log.debug("Result: %s" % result[:TRIM_LOG_MESSAGES_AT])
 
         sid = re.search('Auth=(\S*)', result).group(1)
         if not sid:
             raise GoogleLoginFailed
-        return sid
+        raise ndb.Return(sid)
 
     def _get_token(self):
         """
@@ -546,6 +546,7 @@ class GoogleReaderClient(object):
             return self._make_call(url + '?output=' + format)
         
 
+    @ndb.synctasklet
     def _make_call(self, url, post_data=None):
         """
         Actually executes a call to given url, adding authorization headers
@@ -578,10 +579,9 @@ class GoogleReaderClient(object):
             else:
                 log.info("Calling %s" % request.get_full_url())
 
-        f = urllib2.urlopen( request )
-        result = f.read()
+        result = yield ndb.get_context().urlfetch(url.encode('utf-8'), payload=request.data, headers=request.headers)
 
         log.debug("Result: %s" % result[:TRIM_LOG_MESSAGES_AT])
 
-        return result
+        raise ndb.Return(result)
 

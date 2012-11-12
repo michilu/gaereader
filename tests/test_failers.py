@@ -5,20 +5,28 @@ import pytest
 
 import gaereader
 
+from google.appengine.ext import ndb, testbed
+testbed = testbed.Testbed()
+testbed.activate()
+testbed.init_urlfetch_stub()
 
-def mock_urlopen_login_fail(url, **_kwargv):
-  url = url._Request__original
-  code = 403
-  msg = "Forbidden"
-  hdrs = None
-  fp = StringIO("Error=BadAuthentication")
-  raise urllib2.HTTPError(url, code, msg, hdrs, fp)
+class Result(str):
+  def __init__(self, value):
+    super(Result, self).__init__(value)
+    self.content = value
+
+@ndb.tasklet
+def mock_urlfetch_login_fail(self, url, **_kwargv):
+  result = Result("Error=BadAuthentication")
+  result.status_code = 403
+  result.url = url
+  raise ndb.Return(result)
 
 def pytest_funcarg__mock_login_fail(request):
 
   def setup():
     mock = request.getfuncargvalue("monkeypatch")
-    mock.setattr(urllib2, "urlopen", mock_urlopen_login_fail)
+    mock.setattr(ndb.Context, "urlfetch", mock_urlfetch_login_fail)
     return mock
 
   def teardown(mock):
@@ -31,19 +39,20 @@ def test_GoogleLoginFailed(mock_login_fail):
     gaereader.GoogleReaderClient("login", "password")
 
 
-def mock_urlopen_login_fail1(url, **_kwargv):
-  url = url._Request__original
-  code = 400
-  msg = "Forbidden"
-  hdrs = None
-  fp = StringIO("Error=BadAuthentication")
-  raise urllib2.HTTPError(url, code, msg, hdrs, fp)
+@ndb.tasklet
+def mock_urlfetch_login_fail1(self, url, **_kwargv):
+  result = Result("Error=BadAuthentication")
+  result.status_code = 400
+  result.url = url
+  result.final_url = url
+  result.headers = {}
+  raise ndb.Return(result)
 
 def pytest_funcarg__mock_login_fail1(request):
 
   def setup():
     mock = request.getfuncargvalue("monkeypatch")
-    mock.setattr(urllib2, "urlopen", mock_urlopen_login_fail1)
+    mock.setattr(ndb.Context, "urlfetch", mock_urlfetch_login_fail1)
     return mock
 
   def teardown(mock):
@@ -56,17 +65,18 @@ def test_GoogleLoginFailed1(mock_login_fail1):
     gaereader.GoogleReaderClient("login", "password")
 
 
-def mock_urlopen_login_fail2(url, **_kwargv):
-  url = url._Request__original
-  fp = StringIO("Auth=")
-  headers = None
-  return urllib2.addinfourl(fp, headers, url)
+@ndb.tasklet
+def mock_urlfetch_login_fail2(self, url, **_kwargv):
+  result = Result("Auth=")
+  result.status_code = 200
+  result.url = url
+  raise ndb.Return(result)
 
 def pytest_funcarg__mock_login_fail2(request):
 
   def setup():
     mock = request.getfuncargvalue("monkeypatch")
-    mock.setattr(urllib2, "urlopen", mock_urlopen_login_fail2)
+    mock.setattr(ndb.Context, "urlfetch", mock_urlfetch_login_fail2)
     return mock
 
   def teardown(mock):
@@ -79,8 +89,8 @@ def test_GoogleLoginFailed2(mock_login_fail2):
     gaereader.GoogleReaderClient("login", "password")
 
 
-def mock_urlopen_errors(url, **_kwargv):
-  url = url._Request__original
+@ndb.tasklet
+def mock_urlfetch_errors(self, url, **_kwargv):
   if url == "https://www.google.com/accounts/ClientLogin":
     result = "Auth=DUMMY"
   elif url == "http://www.google.com/reader/api/0/tag/list?output=json":
@@ -93,15 +103,17 @@ def mock_urlopen_errors(url, **_kwargv):
     result = ""
   else:
     raise ValueError(url)
-  fp = StringIO(result)
-  headers = None
-  return urllib2.addinfourl(fp, headers, url)
+
+  result = Result(result)
+  result.status_code = 200
+  result.url = url
+  raise ndb.Return(result)
 
 def pytest_funcarg__mock_errors(request):
 
   def setup():
     mock = request.getfuncargvalue("monkeypatch")
-    mock.setattr(urllib2, "urlopen", mock_urlopen_errors)
+    mock.setattr(ndb.Context, "urlfetch", mock_urlfetch_errors)
     return mock
 
   def teardown(mock):

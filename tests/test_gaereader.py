@@ -6,9 +6,16 @@ import pytest
 
 import gaereader
 
+from google.appengine.ext import ndb, testbed
+testbed = testbed.Testbed()
+testbed.activate()
+testbed.init_urlfetch_stub()
 
-def mock_urlopen(url, **_kwargv):
-  url = url._Request__original
+class Result(str):
+  pass
+
+@ndb.tasklet
+def mock_urlfetch(self, url, **_kwargv):
   if url == "https://www.google.com/accounts/ClientLogin":
     result = "Auth=DUMMY"
   elif url == "http://www.google.com/reader/api/0/tag/list?output=json":
@@ -47,16 +54,18 @@ def mock_urlopen(url, **_kwargv):
     result = 'OK'
   else:
     raise ValueError(url)
-  fp = StringIO(result)
-  headers = None
-  return urllib2.addinfourl(fp, headers, url)
+
+  result = Result(result)
+  result.status_code = 200
+  result.url = url
+  raise ndb.Return(result)
 
 
 def pytest_funcarg__mock(request):
 
   def setup():
     mock = request.getfuncargvalue("monkeypatch")
-    mock.setattr(urllib2, "urlopen", mock_urlopen)
+    mock.setattr(ndb.Context, "urlfetch", mock_urlfetch)
     return mock
 
   def teardown(mock):
