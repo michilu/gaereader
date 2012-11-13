@@ -123,9 +123,9 @@ def pytest_funcarg__mock_errors(request):
 
 def test_GoogleOperationFailed(mock_errors):
   c = gaereader.GoogleReaderClient("login", "password")
-  with pytest.raises(gaereader.GoogleOperationFailed):
-    c.disable_tag("tag")
-  with pytest.raises(gaereader.GoogleOperationFailed):
-    c._change_feed("feed_url", "operation")
-  with pytest.raises(gaereader.GoogleOperationFailed):
-    c._change_tag("feed_url", "title")
+  future = c.disable_tag("tag")
+  assert isinstance(future.get_exception(), gaereader.GoogleOperationFailed)
+  future = c._change_feed("feed_url", "operation")
+  assert isinstance(future.get_exception(), gaereader.GoogleOperationFailed)
+  future = c._change_tag("feed_url", "title")
+  assert isinstance(future.get_exception(), gaereader.GoogleOperationFailed)

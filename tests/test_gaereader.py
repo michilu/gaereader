@@ -75,32 +75,90 @@ def pytest_funcarg__mock(request):
 
 def test_GoogleReaderClient(mock):
   c = gaereader.GoogleReaderClient("login", "password")
-  assert c.tag_id("tag") == "user/0/label/tag"
-  assert c.get_my_id() == "0"
-  assert c.feed_item_id("feed") == "id"
-  assert isinstance(c.get_feed_atom("url"), lxml.etree._Element)
-  assert isinstance(c.get_reading_list_atom(), lxml.etree._Element)
-  assert isinstance(c.get_read_atom(), lxml.etree._Element)
-  assert isinstance(c.get_tagged_atom("tag"), lxml.etree._Element)
-  assert isinstance(c.get_starred_atom(), lxml.etree._Element)
-  assert isinstance(c.get_fresh_atom(), lxml.etree._Element)
-  assert isinstance(c.get_broadcast_atom(), lxml.etree._Element)
-  assert isinstance(c.get_instate_atom("state"), lxml.etree._Element)
-  assert c.search_for_articles("query") == []
-  assert c.article_contents("ids") == {}
-  assert c.feed_contents("feed_url") == {}
-  assert c.get_subscription_list() == {}
-  assert c.get_tag_list() == {u'tags': [{u'id': u'user/0/'}]}
-  assert c.get_preference_list() == {}
-  assert c.get_unread_count() == {}
-  assert c.subscribe_quickadd("site_url") == {}
-  assert c.subscribe_feed("feed_url") is None
-  assert c.unsubscribe_feed("feed_url") is None
-  assert c.change_feed_title("feed_url", "title") is None
-  assert c.add_feed_tag("feed_url", "title", "tag") is None
-  assert c.remove_feed_tag("feed_url", "title", "tag") is None
-  assert c.disable_tag("tag") is None
-  assert isinstance(c._get_atom("url", older_first=True, continue_from="c", format="etree"), lxml.etree._Element)
-  assert c._get_atom("url", format="unkown") == '<?xml version="1.0"?><feed><entry><id>id</id></entry></feed>'
-  assert c._change_feed("feed_url", "operation", add_tag="tag", remove_tag="tag") is None
-  assert c._get_list("url", "format") == '<?xml version="1.0"?><feed><entry><id>id</id></entry></feed>'
+  future = c.tag_id("tag")
+  assert future.get_exception() is None
+  assert future.get_result() == "user/0/label/tag"
+  future = c.get_my_id()
+  assert future.get_exception() is None
+  assert future.get_result() == "0"
+  future = c.feed_item_id("feed")
+  assert future.get_exception() is None
+  assert future.get_result() == "id"
+  future = c.get_feed_atom("url")
+  assert future.get_exception() is None
+  assert isinstance(future.get_result(), lxml.etree._Element)
+  future = c.get_reading_list_atom()
+  assert future.get_exception() is None
+  assert isinstance(future.get_result(), lxml.etree._Element)
+  future = c.get_read_atom()
+  assert future.get_exception() is None
+  assert isinstance(future.get_result(), lxml.etree._Element)
+  future = c.get_tagged_atom("tag")
+  assert future.get_exception() is None
+  assert isinstance(future.get_result(), lxml.etree._Element)
+  future = c.get_starred_atom()
+  assert future.get_exception() is None
+  assert isinstance(future.get_result(), lxml.etree._Element)
+  future = c.get_fresh_atom()
+  assert future.get_exception() is None
+  assert isinstance(future.get_result(), lxml.etree._Element)
+  future = c.get_broadcast_atom()
+  assert future.get_exception() is None
+  assert isinstance(future.get_result(), lxml.etree._Element)
+  future = c.get_instate_atom("state")
+  assert future.get_exception() is None
+  assert isinstance(future.get_result(), lxml.etree._Element)
+  future = c.search_for_articles("query")
+  assert future.get_exception() is None
+  assert future.get_result() == []
+  future = c.article_contents("ids")
+  assert future.get_exception() is None
+  assert future.get_result() == {}
+  future = c.feed_contents("feed_url")
+  assert future.get_exception() is None
+  assert future.get_result() == {}
+  future = c.get_subscription_list()
+  assert future.get_exception() is None
+  assert future.get_result() == {}
+  future = c.get_tag_list()
+  assert future.get_exception() is None
+  assert future.get_result() == {u'tags': [{u'id': u'user/0/'}]}
+  future = c.get_preference_list()
+  assert future.get_exception() is None
+  assert future.get_result() == {}
+  future = c.get_unread_count()
+  assert future.get_exception() is None
+  assert future.get_result() == {}
+  future = c.subscribe_quickadd("site_url")
+  assert future.get_exception() is None
+  assert future.get_result() == {}
+  future = c.subscribe_feed("feed_url")
+  assert future.get_exception() is None
+  assert future.get_result() is None
+  future = c.unsubscribe_feed("feed_url")
+  assert future.get_exception() is None
+  assert future.get_result() is None
+  future = c.change_feed_title("feed_url", "title")
+  assert future.get_exception() is None
+  assert future.get_result() is None
+  future = c.add_feed_tag("feed_url", "title", "tag")
+  assert future.get_exception() is None
+  assert future.get_result() is None
+  future = c.remove_feed_tag("feed_url", "title", "tag")
+  assert future.get_exception() is None
+  assert future.get_result() is None
+  future = c.disable_tag("tag")
+  assert future.get_exception() is None
+  assert future.get_result() is None
+  future = c._get_atom("url", older_first=True, continue_from="c", format="etree")
+  assert future.get_exception() is None
+  assert isinstance(future.get_result(), lxml.etree._Element)
+  future = c._get_atom("url", format="unkown")
+  assert future.get_exception() is None
+  assert future.get_result() == '<?xml version="1.0"?><feed><entry><id>id</id></entry></feed>'
+  future = c._change_feed("feed_url", "operation", add_tag="tag", remove_tag="tag")
+  assert future.get_exception() is None
+  assert future.get_result() is None
+  future = c._get_list("url", "format")
+  assert future.get_exception() is None
+  assert future.get_result() == '<?xml version="1.0"?><feed><entry><id>id</id></entry></feed>'

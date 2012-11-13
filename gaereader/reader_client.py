@@ -86,7 +86,7 @@ class GoogleReaderClient(object):
     
     @ndb.synctasklet
     def __init__(self, login, password):
-        self.session_id = yield self._get_session_id_async(login, password)
+        self.session_id = yield self._get_session_id(login, password)
         self.cached_token = None
         self.cached_token_time = 0
         self.my_id = '-'
@@ -95,6 +95,7 @@ class GoogleReaderClient(object):
     ############################################################
     # Small utilities, used mainly internally
 
+    @ndb.tasklet
     def tag_id(self, tag):
         """
         Converts tag name (say "Life: Politics" into 
@@ -103,23 +104,26 @@ class GoogleReaderClient(object):
         If parameter is already in this form, leaves it as-is
         """
         if not tag.startswith('user/'):
-            tag = 'user/%s/label/%s' % (self.get_my_id(), tag)
-        return tag
+            result = yield self.get_my_id()
+            tag = 'user/%s/label/%s' % (result, tag)
+        raise ndb.Return(tag)
 
+    @ndb.tasklet
     def get_my_id(self):
         """
         Returns true user identifier to be used in API calls, calculating
         it if necessary. Caches the result
         """
         if self.my_id == '-':
-            tl = self.get_tag_list()
+            tl = yield self.get_tag_list()
             for vl in tl['tags']:
                 m = re.match('user/(\d+)/', vl['id'])
                 if m:
                     self.my_id = m.group(1)
                     break
-        return self.my_id
+        raise ndb.Return(self.my_id)
 
+    @ndb.tasklet
     def feed_item_id(self, feed):
         """
         Returns identifier of the first item of given tag feed.
@@ -127,14 +131,15 @@ class GoogleReaderClient(object):
         """
         i = self.cached_feed_item_ids.get(feed)
         if not i:
-            r = self.get_feed_atom(feed, count = 2, format = 'obj')
+            r = yield self.get_feed_atom(feed, count = 2, format = 'obj')
             i = str(r.entry.id)
             self.cached_feed_item_ids[feed] = i
-        return i
+        raise ndb.Return(i)
 
     ############################################################
     # Public API - atom feeds (articles)
 
+    @ndb.tasklet
     def get_feed_atom(self, url, **kwargs):
         """
         Atom feed for any feed. Works also for unsubscribed feeds.
@@ -156,9 +161,11 @@ class GoogleReaderClient(object):
               (handle paging). Parameter given here should be taken from
                <gr:continuation> value from the reply obtained earlier.
         """
-        return self._get_atom(GET_FEED_URL + url,
+        result = yield self._get_atom(GET_FEED_URL + url,
                               **kwargs)
+        raise ndb.Return(result)
 
+    @ndb.tasklet
     def get_reading_list_atom(self, **kwargs):
         """
         Atom feed of unread items
@@ -166,8 +173,10 @@ class GoogleReaderClient(object):
         Handles the same named parameters as get_feed_atom
         (format, count, older_first, continue_from).
         """
-        return self.get_instate_atom('reading-list', **kwargs)
+        result = yield self.get_instate_atom('reading-list', **kwargs)
+        raise ndb.Return(result)
 
+    @ndb.tasklet
     def get_read_atom(self, **kwargs):
         """
         Atom feed of (recent) read items
@@ -175,8 +184,10 @@ class GoogleReaderClient(object):
         Handles the same named parameters as get_feed_atom
         (format, count, older_first, continue_from).
         """
-        return self.get_instate_atom('read', **kwargs)
+        result = yield self.get_instate_atom('read', **kwargs)
+        raise ndb.Return(result)
 
+    @ndb.tasklet
     def get_tagged_atom(self, tag, **kwargs):
         """
         Atom feed of (unread?) items for given tag
@@ -184,9 +195,12 @@ class GoogleReaderClient(object):
         Handles the same named parameters as get_feed_atom
         (format, count, older_first, continue_from).
         """
-        tagged_url = READING_TAG_URL % self.tag_id(tag)
-        return self._get_atom(tagged_url, **kwargs)
+        result = yield self.tag_id(tag)
+        tagged_url = READING_TAG_URL % result
+        result = yield self._get_atom(tagged_url, **kwargs)
+        raise ndb.Return(result)
 
+    @ndb.tasklet
     def get_starred_atom(self, **kwargs):
         """
         Atom feed of starred items
@@ -194,8 +208,10 @@ class GoogleReaderClient(object):
         Handles the same named parameters as get_feed_atom
         (format, count, older_first, continue_from).
         """
-        return self.get_instate_atom('starred', **kwargs)
+        result = yield self.get_instate_atom('starred', **kwargs)
+        raise ndb.Return(result)
 
+    @ndb.tasklet
     def get_fresh_atom(self, **kwargs):
         """
         Atom feed of fresh (newly added) items
@@ -203,8 +219,10 @@ class GoogleReaderClient(object):
         Handles the same named parameters as get_feed_atom
         (format, count, older_first, continue_from).
         """
-        return self.get_instate_atom('fresh', **kwargs)
+        result = yield self.get_instate_atom('fresh', **kwargs)
+        raise ndb.Return(result)
 
+    @ndb.tasklet
     def get_broadcast_atom(self, **kwargs):
         """
         Atom feed of public (shared) items
@@ -212,8 +230,10 @@ class GoogleReaderClient(object):
         Handles the same named parameters as get_feed_atom
         (format, count, older_first, continue_from).
         """
-        return self.get_instate_atom('broadcast', **kwargs)
+        result = yield self.get_instate_atom('broadcast', **kwargs)
+        raise ndb.Return(result)
 
+    @ndb.tasklet
     def get_instate_atom(self, state, **kwargs):
         """
         Atom feed of items in any state. Known states:
@@ -227,12 +247,13 @@ class GoogleReaderClient(object):
         Handles the same named parameters as get_feed_atom
         (format, count, older_first, continue_from).
         """
-        return self._get_atom(IN_STATE_URL % state, **kwargs)
+        result = yield self._get_atom(IN_STATE_URL % state, **kwargs)
+        raise ndb.Return(result)
 
     ############################################################
     # Public API - item
 
-    @ndb.synctasklet
+    @ndb.tasklet
     def search_for_articles(self, query, count=20):
         """
         Searches for articles using given text query.
@@ -258,11 +279,11 @@ class GoogleReaderClient(object):
                 "ck": int(time.mktime(datetime.now().timetuple())),
                 "client": SOURCE,
                 })
-        result = yield self._make_call_async(url)
+        result = yield self._make_call(url)
         reply = json.loads(result)
         raise ndb.Return([ item['id'] for item in reply['results'] ])
 
-    @ndb.synctasklet
+    @ndb.tasklet
     def article_contents(self, ids):
         """
         Return article (entry) contents of specified articles. ids is
@@ -278,11 +299,12 @@ class GoogleReaderClient(object):
                                   "client": SOURCE})
         post_params = [("i", id_) for id_ in ids]
         #post_params.extend([("it", "0")] * len(post_params))
-        post_params.append(("T", self._get_token()))
-        result = yield self._make_call_async(url, post_params)
+        result = yield self._get_token()
+        post_params.append(("T", result))
+        result = yield self._make_call(url, post_params)
         raise ndb.Return(json.loads(result))
 
-    @ndb.synctasklet
+    @ndb.tasklet
     def feed_contents(self, feed_url, count=20, older_first=False):
         """
         Returns list of articles belonging to given feed.
@@ -293,13 +315,14 @@ class GoogleReaderClient(object):
                 "n": count,
                 "r": (older_first and "o" or "d"),
                 "client": SOURCE})
-        result = yield self._make_call_async(url)
+        result = yield self._make_call(url)
         raise ndb.Return(json.loads(result))
 
 
     ############################################################
     # Public API - subscription info
 
+    @ndb.tasklet
     def get_subscription_list(self, format = 'obj'):
         """
         Returns info about all subscribed feeds.
@@ -310,21 +333,28 @@ class GoogleReaderClient(object):
 
         If format = 'obj', returns parsed JSON (python dictionary)
         """
-        return self._get_list(SUBSCRIPTION_LIST_URL, format)
+        result = yield self._get_list(SUBSCRIPTION_LIST_URL, format)
+        raise ndb.Return(result)
 
+    @ndb.tasklet
     def get_tag_list(self, format = 'obj'):
-        return self._get_list(TAG_LIST_URL, format)
+        result = yield self._get_list(TAG_LIST_URL, format)
+        raise ndb.Return(result)
 
+    @ndb.tasklet
     def get_preference_list(self, format = 'obj'):
-        return self._get_list(PREFERENCE_LIST_URL, format)
+        result = yield self._get_list(PREFERENCE_LIST_URL, format)
+        raise ndb.Return(result)
 
+    @ndb.tasklet
     def get_unread_count(self, format = 'obj'):
-        return self._get_list(UNREAD_COUNT_URL, format)
+        result = yield self._get_list(UNREAD_COUNT_URL, format)
+        raise ndb.Return(result)
 
     ############################################################
     # Public API - subscription modifications
 
-    @ndb.synctasklet
+    @ndb.tasklet
     def subscribe_quickadd(self, site_url):
         """
         Subscribe to given site url.
@@ -352,13 +382,15 @@ class GoogleReaderClient(object):
         url = SUBSCRIPTION_QUICKADD_URL + "?" \
               + urllib.urlencode({"ck": int(time.mktime(datetime.now().timetuple())),
                                   "client": SOURCE})
+        result = yield self._get_token()
         post_params = {
             "quickadd": site_url,
-            "T": self._get_token(),
+            "T": result,
             }
-        result = yield self._make_call_async(url, post_params)
+        result = yield self._make_call(url, post_params)
         raise ndb.Return(json.loads(result))
 
+    @ndb.tasklet
     def subscribe_feed(self, feed_url, title = None):
         """
         Subscribe to given feed. Optionally set title.
@@ -366,20 +398,26 @@ class GoogleReaderClient(object):
         Note: feed should specify RSS/Atom url. See subscribe_quickadd for
         alternate method.
         """
-        return self._change_feed(feed_url, 'subscribe', title = title)
+        result = yield self._change_feed(feed_url, 'subscribe', title = title)
+        raise ndb.Return(result)
 
+    @ndb.tasklet
     def unsubscribe_feed(self, feed_url):
         """
         Unsubscribe from the given feed.
         """
-        return self._change_feed(feed_url, 'unsubscribe')
+        result = yield self._change_feed(feed_url, 'unsubscribe')
+        raise ndb.Return(result)
 
+    @ndb.tasklet
     def change_feed_title(self, feed_url, title):
         """
         Changes the feed title
         """
-        return self._change_feed(feed_url, 'edit', title = title)
+        result = yield self._change_feed(feed_url, 'edit', title = title)
+        raise ndb.Return(result)
 
+    @ndb.tasklet
     def add_feed_tag(self, feed_url, title, tag):
         """
         Adds feed to new tag (folder).
@@ -389,8 +427,10 @@ class GoogleReaderClient(object):
         
         It seems that tag may be new (not-yet-existant tags do work)
         """
-        return self._change_tag(feed_url, title, add_tag = tag)
+        result = yield self._change_tag(feed_url, title, add_tag = tag)
+        raise ndb.Return(result)
 
+    @ndb.tasklet
     def remove_feed_tag(self, feed_url, title, tag):
         """
         Removes feed from given tag (folder).
@@ -398,19 +438,21 @@ class GoogleReaderClient(object):
         (say "user/04686467480557924617/label/\u017bycie: Polityka")
         or as the sole name ("Życie: Polityka")
         """
-        return self._change_tag(feed_url, title, remove_tag = tag)
+        result = yield self._change_tag(feed_url, title, remove_tag = tag)
+        raise ndb.Return(result)
 
-    @ndb.synctasklet
+    @ndb.tasklet
     def disable_tag(self, tag):
         """
         Removes tag as a whole
         """
         url = TAG_DISABLE_URL + '?client=%s' % SOURCE
+        result = yield self.tag_id(tag)
         post_data = {
-            's' : self.tag_id(tag),
+            's' : result,
             'ac' : 'disable-tags',
             }
-        reply = yield self._make_call_async(url, post_data)
+        reply = yield self._make_call(url, post_data)
         if reply != "OK":
             raise GoogleOperationFailed
         return
@@ -418,13 +460,8 @@ class GoogleReaderClient(object):
     ############################################################
     # Helper functions
 
-    @ndb.synctasklet
-    def _get_session_id(self, *argv, **kwargv):
-      result = yield self._get_session_id_async(*argv, **kwargv)
-      raise ndb.Return(result)
-
     @ndb.tasklet
-    def _get_session_id_async(self, login, password):
+    def _get_session_id(self, login, password):
         """
         Logging in (and obtaining the session id)
         """
@@ -458,7 +495,7 @@ class GoogleReaderClient(object):
             raise GoogleLoginFailed
         raise ndb.Return(sid)
 
-    @ndb.synctasklet
+    @ndb.tasklet
     def _get_token(self):
         """
         Obtain the call protection token
@@ -466,11 +503,11 @@ class GoogleReaderClient(object):
         # Token jest jakiś czas ważny...
         t = time.time()
         if t - self.cached_token_time > TOKEN_VALID_TIME:
-            self.cached_token = yield self._make_call_async(TOKEN_URL)
+            self.cached_token = yield self._make_call(TOKEN_URL)
             self.cached_token_time = t
         raise ndb.Return(self.cached_token)
 
-    @ndb.synctasklet
+    @ndb.tasklet
     def _get_atom(self, url, count = None, 
                   older_first = False, continue_from = None, format = 'obj'):
         """
@@ -491,7 +528,7 @@ class GoogleReaderClient(object):
             args['c'] = continue_from
         if args:
             url = url.encode('utf-8') + '?' + urllib.urlencode(args)
-        r = yield self._make_call_async(url)
+        r = yield self._make_call(url)
         if format == "obj":
             raise ndb.Return(objectify.fromstring(r))
         elif format == "etree":
@@ -499,47 +536,49 @@ class GoogleReaderClient(object):
         else:
             raise ndb.Return(r)
 
-    @ndb.synctasklet
+    @ndb.tasklet
     def _change_feed(self, feed_url, operation,
                      title = None, add_tag = None, remove_tag = None):
         """
         Subscribe or unsubscribe
         """
         url = SUBSCRIPTION_EDIT_URL + '?client=%s' % SOURCE
+        result = yield self._get_token()
         post_data = { 
             'ac' : operation,
             's' : "feed/" + feed_url,
-            'T' : self._get_token(),
+            'T' : result,
             }
         if title:
             post_data['t'] = title
         if add_tag:
-            post_data['a'] = self.tag_id(add_tag)
+            post_data['a'] = yield self.tag_id(add_tag)
         if remove_tag:
-            post_data['r'] = self.tag_id(remove_tag)
-        reply = yield self._make_call_async(url, post_data)
+            post_data['r'] = yield self.tag_id(remove_tag)
+        reply = yield self._make_call(url, post_data)
         if reply != "OK":
             raise GoogleOperationFailed
         return
 
-    @ndb.synctasklet
+    @ndb.tasklet
     def _change_tag(self, feed_url, title, add_tag = None, remove_tag = None):
         """
         Subscribe or unsubscribe
         """
         #url = TAG_EDIT_URL + '?client=%s' % SOURCE
         url = SUBSCRIPTION_EDIT_URL + '?client=%s' % SOURCE
+        result = yield self._get_token()
         post_data = { 
             'ac' : 'edit',
             's' : "feed/" + feed_url,
             't' : title,
-            'T' : self._get_token(),
+            'T' : result,
             }
         if add_tag:
-            post_data['a'] = self.tag_id(add_tag)
+            post_data['a'] = yield self.tag_id(add_tag)
         if remove_tag:
-            post_data['r'] = self.tag_id(remove_tag)
-        reply = yield self._make_call_async(url, post_data)
+            post_data['r'] = yield self.tag_id(remove_tag)
+        reply = yield self._make_call(url, post_data)
         if reply != "OK":
             raise GoogleOperationFailed
 
@@ -557,23 +596,18 @@ class GoogleReaderClient(object):
 
         return
 
-    @ndb.synctasklet
+    @ndb.tasklet
     def _get_list(self, url, format):
         if format == 'obj':
-            result = yield self._make_call_async(url + '?output=json')
+            result = yield self._make_call(url + '?output=json')
             raise ndb.Return(json.loads(result))
         else:
-            result = yield self._make_call_async(url + '?output=' + format)
+            result = yield self._make_call(url + '?output=' + format)
             raise ndb.Return(result)
         
 
-    @ndb.synctasklet
-    def _make_call(self, *argv, **kwargv):
-      result = yield self._make_call_async(*argv, **kwargv)
-      raise ndb.Return(result)
-
     @ndb.tasklet
-    def _make_call_async(self, url, post_data=None):
+    def _make_call(self, url, post_data=None):
         """
         Actually executes a call to given url, adding authorization headers
         and parameters.
