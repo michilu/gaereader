@@ -1,5 +1,7 @@
 language: python
 python:
-  - "2.7"
-install: "pip install http://googleappengine.googlecode.com/files/google_appengine_1.7.3.zip --use-mirrors"
-script: python setup.py test
+  - 2.7
+install:
+  - curl -O -s http://googleappengine.googlecode.com/files/google_appengine_1.7.3.zip && unzip -q google_appengine_1.7.3.zip
+  - pip install --use-mirrors -q lxml==2.3
+script: PYTHONPATH=google_appengine:google_appengine/lib/yaml/lib python setup.py test

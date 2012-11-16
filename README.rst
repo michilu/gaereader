@@ -1,11 +1,15 @@
-============
-gaereader
-============
+=========================
+gaereader |Build Status|_
+=========================
 
 Simple Google Reader access API. The module implements a couple of
 feed management functions, making it possible to manage Google Reader
 subscriptions (subscribe, unsubscribe, rename, (re)tag feeds) from
 Python scripts and programs.
+
+.. |Build Status| image:: https://secure.travis-ci.org/MiCHiLU/gaereader.png
+.. _`Build Status`: http://travis-ci.org/MiCHiLU/gaereader
+
 
 Warning
 =======

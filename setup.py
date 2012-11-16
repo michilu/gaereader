@@ -7,7 +7,7 @@ import os
 VERSION = "1.2.2"
 KEYWORDS = 'google reader client gae appengine'
 DESCRIPTION = "A Google Reader API client that is optimized for Google App Engine"
-LONG_DESCRIPTION = open("README.txt").read()
+LONG_DESCRIPTION = open("README.rst").read()
 CLASSIFIERS = [
     "Programming Language :: Python",
     "Intended Audience :: Developers",
@@ -23,13 +23,13 @@ class PyTest(Command):
         pass
     def run(self):
         import sys,subprocess
-        errno = subprocess.call([sys.executable, 'runtests.py'])
+        errno = subprocess.call([sys.executable, 'runtests.py', 'tests'])
         raise SystemExit(errno)
 
 class PyTestWithCov(PyTest):
     def run(self):
         import sys,subprocess
-        errno = subprocess.call([sys.executable, 'runtests.py', '--cov-report=html', '--cov=.', '--pdb'])
+        errno = subprocess.call([sys.executable, 'runtests.py', 'tests', '--cov-report=html', '--cov=.', '--pdb'])
         raise SystemExit(errno)
 
 setup(name = 'gaereader',
@@ -46,7 +46,7 @@ setup(name = 'gaereader',
       include_package_data = True,
       zip_safe = True,
       install_requires=[
-        'lxml',
+        'lxml>=2.3',
       ],
       cmdclass = {
         'test': PyTest,
