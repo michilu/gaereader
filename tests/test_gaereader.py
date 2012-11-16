@@ -12,7 +12,9 @@ testbed.activate()
 testbed.init_urlfetch_stub()
 
 class Result(str):
-  pass
+  def __init__(self, value):
+    super(Result, self).__init__(value)
+    self.content = value
 
 @ndb.tasklet
 def mock_urlfetch(self, url, **_kwargv):

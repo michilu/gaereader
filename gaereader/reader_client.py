@@ -21,6 +21,7 @@ import json
 import time
 from datetime import datetime
 from lxml import etree, objectify
+from google.appengine.api import urlfetch
 from google.appengine.ext import ndb
 
 import logging
@@ -482,15 +483,15 @@ class GoogleReaderClient(object):
             log.info("Calling %s with parameters:\n    %s" % (
                         request.get_full_url(), str(pdcopy)))
 
-        result = yield ndb.get_context().urlfetch(LOGIN_URL, payload=request.data, headers=request.headers)
+        result = yield ndb.get_context().urlfetch(LOGIN_URL, payload=request.data, method=urlfetch.POST, headers=request.headers)
         if result.status_code == 403:
             raise GoogleLoginFailed("%s (%s)" % (result, result.content))
         elif result.status_code != 200:
             raise urllib2.HTTPError(result.final_url, result.status_code, None, result.headers, StringIO(result.content))
 
-        log.debug("Result: %s" % result[:TRIM_LOG_MESSAGES_AT])
+        log.debug("Result: %s" % result.content[:TRIM_LOG_MESSAGES_AT])
 
-        sid = re.search('Auth=(\S*)', result).group(1)
+        sid = re.search('Auth=(\S*)', result.content).group(1)
         if not sid:
             raise GoogleLoginFailed
         raise ndb.Return(sid)
@@ -641,7 +642,7 @@ class GoogleReaderClient(object):
 
         result = yield ndb.get_context().urlfetch(url.encode('utf-8'), payload=request.data, headers=request.headers)
 
-        log.debug("Result: %s" % result[:TRIM_LOG_MESSAGES_AT])
+        log.debug("Result: %s" % result.content[:TRIM_LOG_MESSAGES_AT])
 
-        raise ndb.Return(result)
+        raise ndb.Return(result.content)
 
