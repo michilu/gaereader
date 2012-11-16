@@ -42,7 +42,7 @@ setup(name = 'gaereader',
       author='ENDOH takanao',
       author_email='djmchl@gmail.com',
       url='https://github.com/MiCHiLU/gaereader',
-      packages=find_packages('gaereader', exclude=['sample', 'tests']),
+      packages=find_packages(),
       include_package_data = True,
       zip_safe = True,
       install_requires=[
