@@ -629,8 +629,10 @@ class GoogleReaderClient(object):
                     (key, value.encode('utf-8')) 
                     for key, value in post_data.iteritems() ]
             true_data = urllib.urlencode(true_data)
+            method = urlfetch.POST
         else:
             true_data = None
+            method = urlfetch.GET
         request = urllib2.Request(url.encode('utf-8'), true_data, header)
 
         if log.isEnabledFor("info"):
@@ -640,7 +642,7 @@ class GoogleReaderClient(object):
             else:
                 log.info("Calling %s" % request.get_full_url())
 
-        result = yield ndb.get_context().urlfetch(url.encode('utf-8'), payload=request.data, headers=request.headers)
+        result = yield ndb.get_context().urlfetch(url.encode('utf-8'), payload=request.data, method=method, headers=request.headers)
 
         log.debug("Result: %s" % result.content[:TRIM_LOG_MESSAGES_AT])
 
