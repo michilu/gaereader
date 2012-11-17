@@ -26,7 +26,8 @@ def mock_urlfetch(self, url, payload=None, **_kwargv):
     result = "Auth=DUMMY"
   elif url == "http://www.google.com/reader/api/0/tag/list?output=json":
     result = '{"tags": [{"id":"user/0/"}]}'
-  elif url.startswith("http://www.google.com/reader/api/0/search/items/ids?q="):
+  elif url.startswith("http://www.google.com/reader/api/0/search/items/ids?"):
+    assert ("s", "user/0/label/\xe3\x82\xbf\xe3\x82\xb0") in urlparse.parse_qsl(urlparse.urlparse(url).query)
     result = '{"results":[]}'
   elif url == "http://www.google.com/reader/api/0/token":
     result = '{}'
@@ -63,7 +64,7 @@ def test_UnicodeEncodeError(mock):
   assert future.get_exception() is None
   assert future.get_result() == u"user/0/label/\u30bf\u30b0"
 
-  future = c.search_for_articles(u"検索")
+  future = c.search_for_articles(u"検索", tag=u"タグ")
   traceback.print_tb(future.get_traceback())
   assert future.get_exception() is None
   assert future.get_result() == []
