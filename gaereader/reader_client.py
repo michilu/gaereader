@@ -255,7 +255,7 @@ class GoogleReaderClient(object):
     # Public API - item
 
     @ndb.tasklet
-    def search_for_articles(self, query, count=20):
+    def search_for_articles(self, query, count=1000):
         """
         Searches for articles using given text query.
         Returns plain list like:

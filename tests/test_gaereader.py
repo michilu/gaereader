@@ -37,7 +37,7 @@ def mock_urlfetch(self, url, **_kwargv):
                "url?output=format",
               ]:
     result = '<?xml version="1.0"?><feed><entry><id>id</id></entry></feed>'
-  elif url.startswith("http://www.google.com/reader/api/0/search/items/ids?q=query&output=json&num=20&ck="):
+  elif url.startswith("http://www.google.com/reader/api/0/search/items/ids?q=query&output=json&num=1000&ck="):
     result = '{"results":[]}'
   elif (url in [
                "http://www.google.com/reader/api/0/token",
