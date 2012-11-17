@@ -274,7 +274,7 @@ class GoogleReaderClient(object):
         output = "json"
         url = SEARCH_ITEMS_IDS_URL + "?"\
               + urllib.urlencode({
-                "q": query,
+                "q": query.encode('utf-8'),
                 "num": count,
                 "output": output,
                 "ck": int(time.mktime(datetime.now().timetuple())),
