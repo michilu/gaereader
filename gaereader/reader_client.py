@@ -255,7 +255,7 @@ class GoogleReaderClient(object):
     # Public API - item
 
     @ndb.tasklet
-    def search_for_articles(self, query, count=1000):
+    def search_for_articles(self, query, count=1000, tag=None):
         """
         Searches for articles using given text query.
         Returns plain list like:
@@ -272,14 +272,18 @@ class GoogleReaderClient(object):
          should handle both forms fine)
         """
         output = "json"
-        url = SEARCH_ITEMS_IDS_URL + "?"\
-              + urllib.urlencode({
+        query = {
                 "q": query.encode('utf-8'),
                 "num": count,
                 "output": output,
                 "ck": int(time.mktime(datetime.now().timetuple())),
                 "client": SOURCE,
-                })
+                }
+        if tag is not None:
+          tag_id = yield self.tag_id(tag)
+          query["s"] = tag_id.encode('utf-8')
+        url = SEARCH_ITEMS_IDS_URL + "?"\
+              + urllib.urlencode(query)
         result = yield self._make_call(url)
         reply = json.loads(result)
         raise ndb.Return([ item['id'] for item in reply['results'] ])

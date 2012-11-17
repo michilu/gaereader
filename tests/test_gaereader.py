@@ -1,5 +1,6 @@
 from cStringIO import StringIO
 import urllib2
+import urlparse
 
 import lxml
 import pytest
@@ -37,7 +38,10 @@ def mock_urlfetch(self, url, **_kwargv):
                "url?output=format",
               ]:
     result = '<?xml version="1.0"?><feed><entry><id>id</id></entry></feed>'
-  elif url.startswith("http://www.google.com/reader/api/0/search/items/ids?q=query&output=json&num=1000&ck="):
+  elif url.startswith("http://www.google.com/reader/api/0/search/items/ids?"):
+    query = dict(urlparse.parse_qsl(urlparse.urlparse(url).query))
+    if "s" in query:
+      assert query["s"] == "user/0/label/tag"
     result = '{"results":[]}'
   elif (url in [
                "http://www.google.com/reader/api/0/token",
@@ -123,6 +127,10 @@ def test_GoogleReaderClient(mock):
   assert isinstance(future.get_result(), lxml.etree._Element)
 
   future = c.search_for_articles("query")
+  assert future.get_exception() is None
+  assert future.get_result() == []
+
+  future = c.search_for_articles("query", tag="tag")
   assert future.get_exception() is None
   assert future.get_result() == []
 
