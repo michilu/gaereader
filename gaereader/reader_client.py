@@ -68,6 +68,8 @@ IN_STATE_URL = READER_URL + '/atom/user/-/state/com.google/%s'
 GET_FEED_URL = READER_URL + '/atom/feed/'
 READING_TAG_URL = READER_URL + '/atom/%s'
 
+RE_FEED_ID_PREFIX = re.compile(r"^feed/")
+
 class GoogleReaderClient(object):
 
     """
@@ -130,6 +132,7 @@ class GoogleReaderClient(object):
         Returns identifier of the first item of given tag feed.
         Used during sub/unsubscription (for some reason it is needed)
         """
+        feed = RE_FEED_ID_PREFIX.sub("", feed)
         i = self.cached_feed_item_ids.get(feed)
         if not i:
             r = yield self.get_feed_atom(feed, count = 2, format = 'obj')
@@ -162,6 +165,7 @@ class GoogleReaderClient(object):
               (handle paging). Parameter given here should be taken from
                <gr:continuation> value from the reply obtained earlier.
         """
+        url = urllib.quote_plus(RE_FEED_ID_PREFIX.sub("", url))
         result = yield self._get_atom(GET_FEED_URL + url,
                               **kwargs)
         raise ndb.Return(result)
@@ -534,12 +538,18 @@ class GoogleReaderClient(object):
         if args:
             url = url.encode('utf-8') + '?' + urllib.urlencode(args)
         r = yield self._make_call(url)
-        if format == "obj":
-            raise ndb.Return(objectify.fromstring(r))
-        elif format == "etree":
-            raise ndb.Return(etree.XML(r))
-        else:
-            raise ndb.Return(r)
+        try:
+            if format == "obj":
+                raise ndb.Return(objectify.fromstring(r))
+            elif format == "etree":
+                raise ndb.Return(etree.XML(r))
+            else:
+                raise ndb.Return(r)
+        except ndb.Return:
+            raise
+        except Exception, e:
+            logging.error(r)
+            raise GoogleOperationFailed(e)
 
     @ndb.tasklet
     def _change_feed(self, feed_url, operation,
@@ -547,11 +557,14 @@ class GoogleReaderClient(object):
         """
         Subscribe or unsubscribe
         """
+        prefix = "feed/"
+        if not feed_url.startswith(prefix):
+          feed_url = prefix + feed_url
         url = SUBSCRIPTION_EDIT_URL + '?client=%s' % SOURCE
         result = yield self._get_token()
         post_data = { 
             'ac' : operation,
-            's' : "feed/" + feed_url,
+            's' : feed_url,
             'T' : result,
             }
         if title:
@@ -570,12 +583,15 @@ class GoogleReaderClient(object):
         """
         Subscribe or unsubscribe
         """
+        prefix = "feed/"
+        if not feed_url.startswith(prefix):
+          feed_url = prefix + feed_url
         #url = TAG_EDIT_URL + '?client=%s' % SOURCE
         url = SUBSCRIPTION_EDIT_URL + '?client=%s' % SOURCE
         result = yield self._get_token()
         post_data = { 
             'ac' : 'edit',
-            's' : "feed/" + feed_url,
+            's' : feed_url,
             't' : title,
             'T' : result,
             }
