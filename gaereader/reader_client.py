@@ -63,6 +63,7 @@ TAG_EDIT_URL = READER_URL + '/api/0/edit-tag'
 TAG_DISABLE_URL = READER_URL + '/api/0/disable-tag'
 SEARCH_ITEMS_IDS_URL = READER_URL + '/api/0/search/items/ids'
 STREAM_ITEMS_CONTENTS_URL = READER_URL + '/api/0/stream/items/contents'
+STREAM_CONTENTS_URL = READER_URL + '/api/0/stream/contents/%s'
 STREAM_CONTENTS_FEED_URL = READER_URL + '/api/0/stream/contents/feed/%s'
 IN_STATE_URL = READER_URL + '/atom/user/-/state/com.google/%s'
 GET_FEED_URL = READER_URL + '/atom/feed/'
@@ -311,6 +312,18 @@ class GoogleReaderClient(object):
         result = yield self._get_token()
         post_params.append(("T", result))
         result = yield self._make_call(url, post_params)
+        raise ndb.Return(json.loads(result))
+
+    @ndb.tasklet
+    def contents(self, tag, count=20, older_first=False):
+        tag_id = yield self.tag_id(tag)
+        url = STREAM_CONTENTS_URL % urllib.quote_plus(tag_id.encode("utf-8")) + "?" \
+              + urllib.urlencode({
+                "ck": int(time.mktime(datetime.now().timetuple())),
+                "n": count,
+                "r": (older_first and "o" or "d"),
+                "client": SOURCE})
+        result = yield self._make_call(url)
         raise ndb.Return(json.loads(result))
 
     @ndb.tasklet

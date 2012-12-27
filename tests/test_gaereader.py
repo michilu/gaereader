@@ -50,6 +50,7 @@ def mock_urlfetch(self, url, **_kwargv):
                "http://www.google.com/reader/api/0/unread-count?output=json",
                ]
      or url.startswith("http://www.google.com/reader/api/0/stream/items/contents?ck=")
+     or url.startswith("http://www.google.com/reader/api/0/stream/contents/user%2F0%2Flabel%2Ftag?ck=")
      or url.startswith("http://www.google.com/reader/api/0/stream/contents/feed/feed_url?ck=")
      or url.startswith("http://www.google.com/reader/api/0/subscription/quickadd?ck=")):
     result = '{}'
@@ -135,6 +136,10 @@ def test_GoogleReaderClient(mock):
   assert future.get_result() == []
 
   future = c.article_contents("ids")
+  assert future.get_exception() is None
+  assert future.get_result() == {}
+
+  future = c.contents("tag")
   assert future.get_exception() is None
   assert future.get_result() == {}
 
